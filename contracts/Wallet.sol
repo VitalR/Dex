@@ -42,6 +42,4 @@ contract Wallet is Ownable {
         IERC20(tokenMapping[ticker].tokenAddress).transfer(msg.sender, amount);
         balances[msg.sender][ticker] = balances[msg.sender][ticker].sub(amount);
     }
-
-
 }

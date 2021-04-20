@@ -7,11 +7,13 @@ contract Dex is Wallet {
 
     using SafeMath for uint;
 
+    // Define a side enum for the order books
     enum Side {
         BUY, // 0
         SELL // 1
     }
 
+    // Define a order that will be put in the order book
     struct Order {
         uint id;
         address trader;
@@ -38,16 +40,16 @@ contract Dex is Wallet {
 
     function createLimitOrder(Side side, bytes32 ticker, uint amount, uint price) public {
         if(side == Side.BUY) {
-            require(balances[msg.sender]["ETH"] >= amount.mul(price));
+            require(balances[msg.sender]["ETH"] >= amount.mul(price), "Not enough ETH");
         }
         else if(side == Side.SELL) {
-            require(balances[msg.sender][ticker] >= amount);
+            require(balances[msg.sender][ticker] >= amount, "Not enough funds");
         }
 
         // [Order1, Order2, ...] - list of Orders
         Order[] storage orders = orderBook[ticker][uint(side)];
         orders.push(
-            Order(nextOrderId, msg.sender, side, ticker, amount, price)
+            Order(nextOrderId, msg.sender, side, ticker, amount, price, 0)
         );
 
         // Bubble sort
@@ -80,7 +82,7 @@ contract Dex is Wallet {
 
     function createMarketOrder(Side side, bytes32 ticker, uint amount) public {
         if(side == Side.SELL) {
-            require(balances[msg.sender][ticker] >= amount, "Insuffient balance");
+            require(balances[msg.sender][ticker] >= amount, "Insufficient balance");
         }
 
         uint orderBookSide;
@@ -114,23 +116,46 @@ contract Dex is Wallet {
             // Verify that the buyer has enough ETH to cover the purchase (require)
             if(side == Side.BUY) {
                 // Varify that the buyer has enough ETH to cover the purchase (require)
-                require(balances[msg.sender]["ETH"] >= filled.mul(orders[i].price));
+                require(balances[msg.sender]["ETH"] >= filled.mul(orders[i].price), "Not enough ETH");
                 // msg.sender is buyer
                 // Execute the trade:
                 // Transfer ETH from Buyer to Seller
                 // Transfer Tokens from Seller to Buyer
+                balances[msg.sender][ticker] = balances[msg.sender][ticker].add(filled);
+                balances[msg.sender]["ETH"] = balances[msg.sender]["ETH"].sub(cost);
 
-
-
+                balances[orders[i].trader][ticker] = balances[orders[i].trader][ticker].sub(filled);
+                balances[orders[i].trader]["ETH"] = balances[orders[i].trader]["ETH"].add(cost);
             }
             else if(side == Side.SELL) {
                 // msg.sender is seller
                 // Execute the trade:
                 // Transfer ETH from Buyer to Seller
                 // Transfer Tokens from Seller to Buyer
-            }
+                balances[msg.sender][ticker] = balances[msg.sender][ticker].sub(filled);
+                balances[msg.sender]["ETH"] = balances[msg.sender]["ETH"].add(cost);
 
+                balances[orders[i].trader][ticker] = balances[orders[i].trader][ticker].add(filled);
+                balances[orders[i].trader]["ETH"] = balances[orders[i].trader]["ETH"].sub(cost);
+            }
+        }
+
+        // Remove 100% filled orders from the orderbook
+
+        // [
+        //     Order(amount=10, filled=10), // - will be removed
+        //     Order(amount=100, filled=100), // - will be removed
+        //     Order(amount=25, filled=10),
+        //     Order(amount=200, filled=0)
+        // ]
+
+        while(orders.length > 0 && orders[0].filled == orders[0].amount) {
+            // Remove the top element in the orders array by overwriting every element
+            // with the next element in the order list
+            for(uint i = 0; i < orders.length - 1; i++) {
+                orders[i] = orders[i + 1];
+            }
+            orders.pop();
         }
     }
-
 }

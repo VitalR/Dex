@@ -36,7 +36,7 @@ contract("Dex", accounts => {
     //Market orders should be filled until the order book is empty or the market order is 100% filled
     it("Market orders should not fill more limit orders than the market order amount", async () => {
         let orderBook = await dex.getOrderBook(web3.utils.fromUtf8("LINK"), 1) // Get sell side orderBook
-        assert(orderBook.lenght == 0, "Sell side Orderbook should be empty at start of test")
+        assert(orderBook.length == 0, "Sell side Orderbook should be empty at start of test")
 
         await dex.addToken(web3.utils.fromUtf8("LINK"), link.address)
 
@@ -51,31 +51,31 @@ contract("Dex", accounts => {
         await link.approve(dex.address, 50, { from: accounts[3] })
 
         // Deposit LINK into DEX for accounts 1, 2, 3
-        await dex.deposite(50, web3.utils.fromUtf8("LINK"), { from: accounts[1] })
-        await dex.deposite(50, web3.utils.fromUtf8("LINK"), { from: accounts[2] })
-        await dex.deposite(50, web3.utils.fromUtf8("LINK"), { from: accounts[3] })
+        await dex.deposit(50, web3.utils.fromUtf8("LINK"), { from: accounts[1] })
+        await dex.deposit(50, web3.utils.fromUtf8("LINK"), { from: accounts[2] })
+        await dex.deposit(50, web3.utils.fromUtf8("LINK"), { from: accounts[3] })
 
         // Fill up the sell order book
-        await dex.createMarketOrder(1, web3.utils.fromUtf8("LINK"), 5, 300, { from: accounts[1] })
-        await dex.createMarketOrder(1, web3.utils.fromUtf8("LINK"), 5, 400, { from: accounts[2] })
-        await dex.createMarketOrder(1, web3.utils.fromUtf8("LINK"), 5, 500, { from: accounts[3] })
+        await dex.createLimitOrder(1, web3.utils.fromUtf8("LINK"), 5, 300, { from: accounts[1] })
+        await dex.createLimitOrder(1, web3.utils.fromUtf8("LINK"), 5, 400, { from: accounts[2] })
+        await dex.createLimitOrder(1, web3.utils.fromUtf8("LINK"), 5, 500, { from: accounts[3] })
 
         // Create market order that should fill 2/3 orders in the book
         await dex.createMarketOrder(0, web3.utils.fromUtf8("LINK"), 10)
 
         orderBook = await dex.getOrderBook(web3.utils.fromUtf8("LINK"), 1) // Get sell side orderbook
-        assert(orderBook.lenght == 1, "Sell side Orderbook should only have 1 order left")
+        assert(orderBook.length == 1, "Sell side Orderbook should only have 1 order left")
         assert(orderBook[0].filled == 0, "Sell side order should have 0 filled")
     })
 
     // Market orders should be filled until the order book is empty or the market order is 100% filled
     it("Market orders should be filled until the order book is empty", async () => {
         let orderBook = await dex.getOrderBook(web3.utils.fromUtf8("LINK"), 1) // Get sell side orderbook
-        assert(orderBook.lenght == 1, "Sell side Orderbook should have 1 order left")
+        assert(orderBook.length == 1, "Sell side Orderbook should have 1 order left")
 
         // Fill up the sell order book again
-        await dex.createMarketOrder(1, web3.utils.fromUtf8("LINK"), 5, 400, { from: accounts[1] })
-        await dex.createMarketOrder(1, web3.utils.fromUtf8("LINK"), 5, 400, { from: accounts[2] })
+        await dex.createLimitOrder(1, web3.utils.fromUtf8("LINK"), 5, 400, { from: accounts[1] })
+        await dex.createLimitOrder(1, web3.utils.fromUtf8("LINK"), 5, 400, { from: accounts[2] })
 
         // Check buyer link balance before link purchase
         let balanceBefore = await dex.balances(accounts[0], web3.utils.fromUtf8("LINK"))
@@ -94,7 +94,7 @@ contract("Dex", accounts => {
     it("The eth balance of the buyer should decrease with the filled amount", async () => {
         // Seller depsits link and creates a sell limit order for 1 link for 300 wei
         await link.approve(dex.address, 500, { from: accounts[1] })
-        await dex.createMarketOrder(1, web3.utils.fromUtf8("LINK"), 1, 300, { from: accounts[1] })
+        await dex.createLimitOrder(1, web3.utils.fromUtf8("LINK"), 1, 300, { from: accounts[1] })
 
         // Check buyer ETH balance before trade
         let balanceBefore = await dex.balances(accounts[0], web3.utils.fromUtf8("ETH"))
@@ -107,14 +107,14 @@ contract("Dex", accounts => {
     // The token balances of the limit order sellers should decrease with the filled amounts
     it("The token balances of the limit order sellers should decrease with the filled amounts", async () => {
         let orderBook = await dex.getOrderBook(web3.utils.fromUtf8("LINK"), 1) // Get sell side orderbook
-        assert(orderBook.lenght == 0, "Sell side Orderbook should be empty at start of test")
+        assert(orderBook.length == 0, "Sell side Orderbook should be empty at start of test")
 
         // Seller Account[2] deposits link
         await link.approve(dex.address, 500, { from: accounts[2] })
-        await dex.deposite(100, web3.utils.fromUtf8("LINK"), { from: accounts[2] })
+        await dex.deposit(100, web3.utils.fromUtf8("LINK"), { from: accounts[2] })
 
-        await dex.createMarketOrder(1, web3.utils.fromUtf8("LINK"), 1, 300, { from: accounts[1] })
-        await dex.createMarketOrder(1, web3.utils.fromUtf8("LINK"), 1, 400, { from: accounts[2] })
+        await dex.createLimitOrder(1, web3.utils.fromUtf8("LINK"), 1, 300, { from: accounts[1] })
+        await dex.createLimitOrder(1, web3.utils.fromUtf8("LINK"), 1, 400, { from: accounts[2] })
 
         // Check sellers link balances before trade
         let account1balanceBefore = await dex.balances(accounts[1], web3.utils.fromUtf8("LINK"))
@@ -137,7 +137,7 @@ contract("Dex", accounts => {
 
         // Seller deposits link and creates a sell limit order for 1 link for 300 wei
         await link.approve(dex.address, 500)
-        await dex.deposite(50, web3.utils.fromUtf8("LINK"))
+        await dex.deposit(50, web3.utils.fromUtf8("LINK"))
 
         await dex.depositETH({ value: 10000 })
 
@@ -147,13 +147,13 @@ contract("Dex", accounts => {
         await dex.createMarketOrder(0, web3.utils.fromUtf8("LINK"), 1)
 
         orderBook = await dex.getOrderBook(web3.utils.fromUtf8("LINK"), 1) // Get sell side orderbook
-        assert(orderBook.lenght == 0, "Sell side Orderbook should be empty after trade")
+        assert(orderBook.length == 0, "Sell side Orderbook should be empty after trade")
     })
 
     // Partly filled limit orders should be modified to represent the filled/remaining amount
     it("Limit orders filled property should be set correctly after a trade", async () => {
         let orderBook = await dex.getOrderBook(web3.utils.fromUtf8("LINK"), 1) // Get sell side orderbook
-        assert(orderBook.lenght == 0, "Sell side Orderbook should be empty at start of test")
+        assert(orderBook.length == 0, "Sell side Orderbook should be empty at start of test")
 
         await dex.createLimitOrder(1, web3.utils.fromUtf8("LINK"), 5, 300, { from: accounts[1] }) 
         await dex.createMarketOrder(0, web3.utils.fromUtf8("LINK"), 2)
