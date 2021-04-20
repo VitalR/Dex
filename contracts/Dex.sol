@@ -19,6 +19,7 @@ contract Dex is Wallet {
         bytes32 ticker;
         uint amount;
         uint price;
+        uint filled;
     }
 
     uint public nextOrderId = 0;
@@ -26,8 +27,8 @@ contract Dex is Wallet {
     // ticker => Side => Order[];
     mapping(bytes32 => mapping(uint  => Order[])) public orderBook;
 
-    function depositETH(uint value) public {
-
+    function depositETH() public payable {
+        balances[msg.sender]["ETH"] = balances[msg.sender]["ETH"].add(msg.value);
     }
 
     function getOrderBook(bytes32 ticker, Side side) view public returns (Order[] memory) {
@@ -78,7 +79,58 @@ contract Dex is Wallet {
     }
 
     function createMarketOrder(Side side, bytes32 ticker, uint amount) public {
-        
+        if(side == Side.SELL) {
+            require(balances[msg.sender][ticker] >= amount, "Insuffient balance");
+        }
+
+        uint orderBookSide;
+        if(side == Side.BUY) {
+            orderBookSide = 1;
+        } else {
+            orderBookSide = 0;
+        }
+        Order[] storage orders = orderBook[ticker][orderBookSide];
+
+        uint totalFilled;
+
+        for(uint i = 0; i < orders.length && totalFilled < amount; i++) {
+            // How much we can fill from order[i]
+            // Update totalFilled
+            uint leftToFill = amount.sub(totalFilled);
+            uint availableToFill = orders[i].amount.sub(orders[i].filled); // order.amount - order.filled
+            uint filled = 0;
+
+            if(availableToFill > leftToFill) {
+                filled = leftToFill; // Fill the entire market order
+            } else {
+                filled = availableToFill; // Fill as much as is available in order[i]
+            }
+
+            totalFilled = totalFilled.add(filled);
+            orders[i].filled = orders[i].filled.add(filled);
+            uint cost = filled.mul(orders[i].price);
+
+            // Execute the trade & shift balances betweein buyer/seller
+            // Verify that the buyer has enough ETH to cover the purchase (require)
+            if(side == Side.BUY) {
+                // Varify that the buyer has enough ETH to cover the purchase (require)
+                require(balances[msg.sender]["ETH"] >= filled.mul(orders[i].price));
+                // msg.sender is buyer
+                // Execute the trade:
+                // Transfer ETH from Buyer to Seller
+                // Transfer Tokens from Seller to Buyer
+
+
+
+            }
+            else if(side == Side.SELL) {
+                // msg.sender is seller
+                // Execute the trade:
+                // Transfer ETH from Buyer to Seller
+                // Transfer Tokens from Seller to Buyer
+            }
+
+        }
     }
 
 }
